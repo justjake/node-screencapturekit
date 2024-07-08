@@ -1,0 +1,7 @@
+.build
+package-lock.json
+Package.resolved
+.swiftpm
+node_modules
+.DS_Store
+/image.png

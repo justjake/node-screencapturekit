@@ -1,0 +1,21 @@
+{
+  "name": "node-screencapturekit",
+  "version": "0.0.1",
+  "description": "NodeJS wrapper for Apple's ScreenCaptureKit",
+  "scripts": {
+    "start": "node-swift build && tsx index.ts && open image.png",
+    "swift:build": "node-swift build",
+    "swift:rebuild": "node-swift rebuild"
+  },
+  "author": "Jake Teton-Landis",
+  "license": "GPL-3.0-only",
+  "dependencies": {
+    "@types/node": "20.14.9",
+    "node-swift": "git://github.com/justjake/node-swift.git#jake--NodeName-macro"
+  },
+  "private": true,
+  "devDependencies": {
+    "typescript": "5.5.3",
+    "tsx": "4.16.2"
+  }
+}
