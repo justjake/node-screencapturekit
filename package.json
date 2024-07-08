@@ -33,7 +33,6 @@
     "./.build/release",
     "./.build/arm64-apple-macosx/release/Module.node"
   ],
-  "private": true,
   "devDependencies": {
     "node-swift": "git://github.com/justjake/node-swift.git#jake--NodeName-macro",
     "typescript": "5.5.3",
