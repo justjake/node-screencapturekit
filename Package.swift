@@ -3,17 +3,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "MyExample",
+    name: "node-screencapturekit",
     platforms: [.macOS(.v10_15)],
     products: [
         .library(
-            name: "MyExample",
-            targets: ["MyExample"]
+            name: "NodeScreenCaptureKit",
+            targets: ["NodeScreenCaptureKit"]
         ),
         .library(
             name: "Module",
             type: .dynamic,
-            targets: ["MyExample"]
+            targets: ["NodeScreenCaptureKit"]
         )
     ],
     dependencies: [
@@ -21,7 +21,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "MyExample",
+            name: "NodeScreenCaptureKit",
             dependencies: [
                 .product(name: "NodeAPI", package: "node-swift"),
                 .product(name: "NodeModuleSupport", package: "node-swift"),

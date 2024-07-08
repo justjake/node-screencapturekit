@@ -4,8 +4,11 @@
   "description": "NodeJS wrapper for Apple's ScreenCaptureKit",
   "scripts": {
     "start": "node-swift build && scripts/demo.ts && open image.png",
+    "swift:debug": "node-swift build --debug",
     "swift:build": "node-swift build",
-    "swift:rebuild": "node-swift rebuild"
+    "swift:rebuild": "node-swift rebuild",
+    "ts:build": "tsc",
+    "ts:check": "tsc --noEmit"
   },
   "author": "Jake Teton-Landis",
   "license": "GPL-3.0-only",
@@ -13,6 +16,20 @@
     "@types/node": "20.14.9",
     "node-swift": "git://github.com/justjake/node-swift.git#jake--NodeName-macro"
   },
+  "types": "./lib/index.d.ts",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    }
+  },
+  "files": [
+    "./lib",
+    "./.build/Module.node",
+    "./.build/release",
+    "./.build/arm64-apple-macosx/release/Module.node"
+  ],
   "private": true,
   "devDependencies": {
     "typescript": "5.5.3",
