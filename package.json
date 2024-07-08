@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "NodeJS wrapper for Apple's ScreenCaptureKit",
   "scripts": {
-    "start": "node-swift build && tsx index.ts && open image.png",
+    "start": "node-swift build && scripts/demo.ts && open image.png",
     "swift:build": "node-swift build",
     "swift:rebuild": "node-swift rebuild"
   },

@@ -1,12 +1,5 @@
 import { CGRect, CGSize } from "./CoreGraphics";
-import {
-  createStreamConfiguration as RAW_createStreamConfiguration,
-  getSharableContent as RAW_getSharableContent,
-  createContentFilter as RAW_createContentFilter,
-  captureImage as RAW_captureImage,
-  pickContentFilter as RAW_pickContentFilter,
-  SCContentSharingPickerMode as RAW_SCContentSharingPickerMode,
-} from "./.build/Module.node";
+import { NativeModule } from './NativeModule.js'
 
 export interface SCDisplay {
   readonly displayID: string;
@@ -43,7 +36,7 @@ export const SCSharableContent = {
     onScreenWindowsOnlyAbove?: SCWindow;
     onScreenWindowsOnlyBelow?: SCWindow;
   }): Promise<SCSharableContent> {
-    return RAW_getSharableContent(args);
+    return NativeModule.getSharableContent(args);
   },
 } as const;
 
@@ -86,7 +79,7 @@ export const SCContentFilter = {
     window: SCWindow;
     includeWindowShadow?: boolean;
   }): SCContentFilter {
-    return RAW_createContentFilter(args);
+    return NativeModule.createContentFilter(args);
   },
 
   forDisplay(
@@ -96,7 +89,7 @@ export const SCContentFilter = {
       | SCContentFilterDisplayIncludingApps
       | SCContentFilterDisplayExcludingApps
   ): SCContentFilter {
-    return RAW_createContentFilter(args);
+    return NativeModule.createContentFilter(args);
   },
 };
 
@@ -150,7 +143,7 @@ Two-plane “full” range YCbCr 4:2:0.
 
 export const SCStreamConfiguration = {
   create(args: Partial<SCStreamConfiguration> = {}): SCStreamConfiguration {
-    const result = RAW_createStreamConfiguration() as SCStreamConfiguration;
+    const result = NativeModule.createStreamConfiguration() as SCStreamConfiguration;
     Object.assign(result, args);
     return result;
   },
@@ -166,7 +159,7 @@ export async function captureImage(
   contentFilter?: SCContentFilter,
   config?: SCStreamConfiguration
 ): Promise<ScreenShotImage> {
-  return RAW_captureImage(contentFilter, config);
+  return NativeModule.captureImage(contentFilter, config);
 }
 
 /*
@@ -183,7 +176,7 @@ export async function captureImage(
 export type SCContentSharingPickerMode = number;
 /** Bitfield. Use bitwise or to combine options. */
 export const SCContentSharingPickerMode: SCContentSharingPickerModes =
-  RAW_SCContentSharingPickerMode;
+  NativeModule.SCContentSharingPickerMode;
 
 interface SCContentSharingPickerModes {
   readonly multipleApplications: SCContentSharingPickerMode;
@@ -203,5 +196,5 @@ export interface SCContentSharingPickerConfiguration {
 export async function pickContentFilter(
   args: Partial<SCContentSharingPickerConfiguration> = {}
 ): Promise<SCContentFilter> {
-  return RAW_pickContentFilter(args);
+  return NativeModule.pickContentFilter(args);
 }

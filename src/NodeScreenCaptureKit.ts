@@ -1,5 +1,4 @@
-import { config } from "process";
-import { CGPoint } from "./CoreGraphics";
+import { CGPoint, CGRect } from "./CoreGraphics";
 import {
   SCContentFilter,
   SCSharableContent,
@@ -20,7 +19,7 @@ export async function getWindowsUnderPoint(
   });
 
   return content.windows
-    .filter((window) => window.frame.contains(point))
+    .filter((window) => CGRect.containsPoint(window.frame, point))
     .sort((a, b) => b.windowLayer - a.windowLayer);
 }
 
@@ -28,10 +27,9 @@ export async function captureWindow(args: {
   window: SCWindow;
   ignoreShadows: boolean;
 }) {
-  const filter = SCContentFilter.forWindow(args.window);
-  const streamConfig = SCStreamConfiguration.create({
-    ignoreShadowsDisplay: args.ignoreShadows,
-    ignoreGlobalClipSingleWindow: args.ignoreShadows,
+  const filter = SCContentFilter.forWindow({
+    window: args.window,
+    includeWindowShadow: !args.ignoreShadows
   });
-  return await captureImage(filter, streamConfig);
+  return await captureImage(filter);
 }

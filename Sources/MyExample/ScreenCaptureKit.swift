@@ -289,9 +289,9 @@ struct ContentFilterArgs: NodeValueCreatable {
 extension SCShareableContent: NodeValueConvertible {
   public func nodeValue() throws -> any NodeAPI.NodeValue {
     try NodeObject([
-      "displays": self.displays,
-      "applications": self.applications.map { inner in RunningApplication(inner) },
-      "windows": self.windows.map { inner in Window(inner) },
+      "displays": self.displays.map { Display($0) },
+      "applications": self.applications.map { RunningApplication($0) },
+      "windows": self.windows.map { Window($0) },
     ])
   }
 
