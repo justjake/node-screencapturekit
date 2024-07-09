@@ -1,5 +1,5 @@
 import { CGRect, CGSize } from "./CoreGraphics";
-import { NativeModule } from './NativeModule.js'
+import { NativeModule } from "./NativeModule.js";
 
 export interface SCDisplay {
   readonly displayID: string;
@@ -66,7 +66,7 @@ interface SCContentFilterDisplayExcludingApps
   windows?: SCWindow[];
 }
 
-interface SCContentFilter {
+export interface SCContentFilter {
   readonly contentRect: CGRect;
   readonly pointPixelScale: number;
   readonly scaledContentSize: CGSize;
@@ -143,7 +143,8 @@ Two-plane “full” range YCbCr 4:2:0.
 
 export const SCStreamConfiguration = {
   create(args: Partial<SCStreamConfiguration> = {}): SCStreamConfiguration {
-    const result = NativeModule.createStreamConfiguration() as SCStreamConfiguration;
+    const result =
+      NativeModule.createStreamConfiguration() as SCStreamConfiguration;
     Object.assign(result, args);
     return result;
   },

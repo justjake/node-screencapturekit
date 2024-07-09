@@ -3,9 +3,10 @@ import Foundation
 import NodeAPI
 import ScreenCaptureKit
 
+
 class AppSession<T>: NSObject, NSApplicationDelegate {
   typealias Func = () async throws -> T
-  
+
   let app = NSApplication.shared
   let initialActivationPolicy = NSApplication.shared.activationPolicy()
   let initialDelegate = NSApplication.shared.delegate
@@ -14,41 +15,40 @@ class AppSession<T>: NSObject, NSApplicationDelegate {
   var task: Task<T, Error>? = nil
   var result: Result<T, Error>? = nil
   var started = false
-  
+
   init(_ produce: @escaping Func) {
     self.produce = produce
   }
-  
-  @discardableResult
-  func start() -> Bool {
+
+  func shouldCallDone() -> Bool {
     if app.isRunning {
       print("app already running")
       runFunc()
-      return false
+      return true
     }
-    
+
     if initialActivationPolicy == .prohibited {
       app.setActivationPolicy(.accessory)
     }
-    
+
     app.delegate = self
     started = true
     app.run()
     print("after app.run \(threadInfo())")
-    return true
+    return false
   }
-  
-  func applicationDidFinishLaunching(_ notification: Notification) {
+
+  func applicationDidFinishLaunching(_: Notification) {
     print("applicationDidFinishLaunching")
     runFunc()
   }
-  
+
   private func runFunc() {
     print("runFunc")
     defer { print("end runFunc") }
-    task = Task { @MainActor in
+    Task {
       print("runFunc task started \(started)")
-      defer { print("runFunc task stopped: \(String(describing: result))")}
+      defer { print("runFunc task stopped: \(String(describing: result))") }
       do {
         let success = try await produce()
         result = .success(success)
@@ -61,16 +61,16 @@ class AppSession<T>: NSObject, NSApplicationDelegate {
       }
     }
   }
-  
+
   func done() {
     app.setActivationPolicy(initialActivationPolicy)
     app.delegate = initialDelegate
     if started {
-      threadInfo()
       let stopEvent = NSEvent.otherEvent(with: .applicationDefined, location: .zero, modifierFlags: .deviceIndependentFlagsMask, timestamp: TimeInterval(), windowNumber: 0, context: nil, subtype: 0, data1: 0, data2: 0)!
       app.postEvent(stopEvent, atStart: true)
       app.stop(self)
       print("app.stop(self) \(threadInfo())")
+      started = false
     }
   }
 }
@@ -78,38 +78,18 @@ class AppSession<T>: NSObject, NSApplicationDelegate {
 // No MainActor here.
 @NodeActor
 @available(macOS 14.0, *)
-func withUI<I>(block: @escaping () async throws -> I) throws -> I {
+func withUI<I>(block _: @escaping () async throws -> I) throws -> I? {
   print("withUI begin")
-  let delegate = AppSession(block)
-  defer { delegate.done() }
-  delegate.start()
-  return try delegate.result!.get()
+  let delegate = AppSession { @MainActor in nil as I? }
+  if delegate.shouldCallDone() {
+    MainActor.assumeIsolated { delegate.done() }
+  }
+//  return try delegate.result!.get()
+  return nil
 }
 
 func threadInfo() -> String {
   "isMainThread: \(Thread.current.isMainThread), \(Thread.current), task priority \(Task.currentPriority), isCancelled: \(Task.isCancelled)"
-}
-
-@available(macOS 14.0, *)
-class MainThreadHelper<T>: NSObject, NSApplicationDelegate {
-  var filter: SCContentFilter? = nil
-  var window: NSWindow? = nil
-  var task: Task<T, Error>? = nil
-  var whenDidFinishLaunching: () async throws -> T
-
-  init(whenDidFinishLaunching block: @escaping () async throws -> T) {
-    whenDidFinishLaunching = block
-  }
-
-  func applicationDidFinishLaunching(_: Notification) {
-    print("didFinishLaunching")
-    task = Task { @MainActor in
-      let result = try await whenDidFinishLaunching()
-      NSApp.stop(self)
-      print("NSApp.stop")
-      return result
-    }
-  }
 }
 
 @available(macOS 14.0, *)
@@ -146,7 +126,7 @@ struct NodeModule {
 
   static func testMainActor() async throws -> ContentFilter? {
     threadInfo()
-    let result = try withUI(block: { @MainActor in
+    let maybeResult = try withUI(block: { @MainActor in
       print("started producing")
 //      let config = SCContentSharingPickerConfiguration()
       print("starting presenter")
@@ -154,12 +134,60 @@ struct NodeModule {
 //      return SCContentF
       return nil as SCContentFilter?
     })
-    print("result: \(result)")
-    if let result = result {
-      return ContentFilter(result)
-    }
+    print("\(#file):\(#line) result: \(maybeResult)")
+//    if let result = maybeResult {
+//      let actual = ContentFilter(result)
+//      print("made actual")
+//      return actual
+//    }
     return nil
   }
+}
+
+@available(macOS 14.0, *)
+@NodeActor
+func makeTestMainActor() throws -> NodeFunction {
+  return try NodeFunction { (args: NodeArguments) in
+    return try NodePromise {
+      print("\(#file):\(#line) start")
+      
+      let result = try await NodeModule.testMainActor()
+      
+      print("\(#file):\(#line) end")
+      return result
+    }
+  }
+}
+
+@available(macOS 14.0, *)
+func testMainActor2() throws -> ContentFilter {
+  class MyAppDelegate: NSObject, NSApplicationDelegate {
+    var result: Result<SCContentFilter, Error>? = nil
+    func applicationDidFinishLaunching(_ notification: Notification) {
+      print("applicationDidFinishLaunching")
+      // Is this enough to trigger the bug?
+      Task {
+        let config = SCContentSharingPickerConfiguration()
+        do {
+          result = .success(try await config.preset())
+          
+          let stopEvent = NSEvent.otherEvent(with: .applicationDefined, location: .zero, modifierFlags: .deviceIndependentFlagsMask, timestamp: TimeInterval(), windowNumber: 0, context: nil, subtype: 0, data1: 0, data2: 0)!
+          NSApp.postEvent(stopEvent, atStart: true)
+          NSApp.stop(self)
+        } catch {
+          result = .failure(error)
+        }
+      }
+    }
+  }
+  
+  let delegate = MyAppDelegate()
+  let app = NSApplication.shared
+  app.delegate = delegate
+  app.run()
+  print("app.run done")
+  let result = try delegate.result!.get()
+  return ContentFilter(result)
 }
 
 @available(macOS 14.0, *)
@@ -172,5 +200,6 @@ struct NodeModule {
     try await NodeModule.captureImage(filter: filter, config: config)
   },
   "pickContentFilter": NodeFunction { try await NodeModule.pickContentFilter(args: $0) },
-  "testMainActor": NodeFunction { return try await NodeModule.testMainActor() },
+//  "testMainActor": makeTestMainActor(),
+  "testMainActor": NodeFunction { return try testMainActor2() }
 ])

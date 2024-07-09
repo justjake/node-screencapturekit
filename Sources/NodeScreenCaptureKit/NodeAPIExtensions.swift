@@ -56,10 +56,10 @@ protocol NodeInspect {
   }
 
   init(depth: NodeNumber, options: NodeObject, inspect: NodeFunction) throws {
-    self.depth = Int(try depth.double())
-    self.nodeInspect = inspect
+    self.depth = try Int(depth.double())
+    nodeInspect = inspect
     self.options = options
-  } 
+  }
 
   func stylize(_ value: NodeValueConvertible, _ type: String) throws -> any NodeValue {
     try options.stylize(value, type)
@@ -78,7 +78,7 @@ protocol NodeInspect {
   }
 
   func stylize(inferType value: NodeValue) throws -> any NodeValue {
-    try stylize(value, "\(try value.nodeType())")
+    try stylize(value, "\(value.nodeType())")
   }
 
   func stylize(number value: NodeValueConvertible) throws -> any NodeValue {
@@ -100,29 +100,29 @@ protocol NodeInspect {
 
   func nextOptions() throws -> NodeObject {
     let nextOptions = try options.clone()
-    try nextOptions["depth"].set(to: try nextDepth())
+    try nextOptions["depth"].set(to: nextDepth())
     return nextOptions
   }
 
   func nextInspector() throws -> Inspector {
-    try Inspector(depth: try NodeNumber(coercing: nextDepth()), options: try nextOptions(), inspect: nodeInspect)
+    try Inspector(depth: NodeNumber(coercing: nextDepth()), options: nextOptions(), inspect: nodeInspect)
   }
 
   func inspect(_ child: NodeValueConvertible) throws -> NodeValueConvertible {
     if depth < 0 {
       switch try child.nodeType() {
       case .object:
-        return "\(try child.nodeValue())"
+        return try "\(child.nodeValue())"
       default:
         break
       }
     }
 
-    return try nodeInspect.call([try child.nodeValue(), try nextOptions()])
+    return try nodeInspect.call([child.nodeValue(), nextOptions()])
   }
 
   func inspect(_ inspectable: NodeInspect) throws -> InspectResult {
-    let string = try inspectable.nodeInspect(try nextInspector())
+    let string = try inspectable.nodeInspect(nextInspector())
     return InspectResult(string)
   }
 
@@ -149,7 +149,7 @@ protocol NodeInspect {
 
   func nodeClass<T: NodeClass, each A: NodeValueConvertible>(value: T, paths: repeat (String, (T) throws -> each A)) throws -> String {
     let name = try stylize(special: T.name)
-    
+
     // NOTE: calling keyPaths here crashes the Swift 5.9 compiler
     // So, we copy-paste the implementation here.
     var strings: [String] = []
@@ -185,7 +185,7 @@ struct InspectResult: NodeValueConvertible, CustomDebugStringConvertible {
 
   init(_ value: String) {
     self.value = value
-    self.debugDescription = value
+    debugDescription = value
   }
 
   func nodeValue() throws -> NodeValue {
@@ -193,18 +193,17 @@ struct InspectResult: NodeValueConvertible, CustomDebugStringConvertible {
   }
 }
 
-extension NodeMethod {
-    /// Support for `@NodeMethod` on a func(Inspector)
-    public init<T: NodeClass>(
-        attributes: NodePropertyAttributes = .defaultMethod,
-        _ callback: @escaping (T) -> @NodeActor (_: Inspector) throws -> NodeValueConvertible
-    ) {
-        self.init(attributes: attributes) { (target: T) in
-            { (args: NodeArguments) in
-                let inspector = try Inspector.from(args: args)
-                return try callback(target)(inspector)
-            }
-        }
+public extension NodeMethod {
+  /// Support for `@NodeMethod` on a func(Inspector)
+  init<T: NodeClass>(
+    attributes: NodePropertyAttributes = .defaultMethod,
+    _ callback: @escaping (T) -> @NodeActor (_: Inspector) throws -> NodeValueConvertible
+  ) {
+    self.init(attributes: attributes) { (target: T) in
+      { (args: NodeArguments) in
+        let inspector = try Inspector.from(args: args)
+        return try callback(target)(inspector)
+      }
     }
+  }
 }
-

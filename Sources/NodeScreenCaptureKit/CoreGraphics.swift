@@ -11,7 +11,7 @@ extension CGFloat: NodeValueConvertible, NodeValueCreatable {
   }
 
   public static func from(_ value: NodeAPI.NodeNumber) throws -> CGFloat {
-    CGFloat(try value.double())
+    try CGFloat(value.double())
   }
 }
 
@@ -32,13 +32,13 @@ extension CGPoint: NodeValueConvertible, NodeValueCreatable, NodeInspect {
   }
 
   func nodeInspect(_ inspector: Inspector) throws -> String {
-    "x: \(try inspector.stylize(inferType: x)) y: \(try inspector.stylize(inferType: y))"
+    try "x: \(inspector.stylize(inferType: x)) y: \(inspector.stylize(inferType: y))"
   }
 }
 
 extension CGSize: NodeValueConvertible, NodeValueCreatable, NodeInspect {
   func nodeInspect(_ inspector: Inspector) throws -> String {
-    "\(try inspector.stylize(inferType: width))x\(try inspector.stylize(inferType: height))"
+    try "\(inspector.stylize(inferType: width))x\(inspector.stylize(inferType: height))"
   }
 
   public typealias ValueType = NodeObject
@@ -55,7 +55,7 @@ extension CGSize: NodeValueConvertible, NodeValueCreatable, NodeInspect {
     let height = try value.propertyAs("height", Double.self)
     return Self(width: width, height: height)
   }
-  
+
   public func scaled(by scale: CGFloat) -> CGSize {
     Self(width: width * scale, height: height * scale)
   }
@@ -78,7 +78,7 @@ extension CGRect: NodeValueConvertible, NodeValueCreatable, NodeInspect {
   }
 
   func nodeInspect(_ inspector: Inspector) throws -> String {
-    "[\(try inspector.inspect(origin as NodeInspect)) \(try inspector.inspect(size as NodeInspect))]"
+    try "[\(inspector.inspect(origin as NodeInspect)) \(inspector.inspect(size as NodeInspect))]"
   }
 }
 
@@ -105,8 +105,8 @@ extension CGImage {
 
   init(_ image: CGImage) {
     self.image = image
-    self.size = image.size
-    self.task = Task(priority: .userInitiated) { try image.pngImageData() }
+    size = image.size
+    task = Task(priority: .userInitiated) { try image.pngImageData() }
   }
 
   @NodeActor
@@ -119,9 +119,10 @@ extension CGImage {
   @NodeActor
   @NodeName(NodeSymbol.utilInspectCustom)
   @NodeMethod
-  func nodeInspect(_ inspector: Inspector) throws -> String {
-    return try inspector.nodeClass(
-      value: self, paths: ("size", \.size)
-    )
+  func nodeInspect(_: Inspector) throws -> String {
+    return "TODO"
+    // return try inspector.nodeClass(
+    //   value: self, paths: ("size", \.size)
+    // )
   }
 }

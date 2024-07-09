@@ -1,5 +1,7 @@
 #!/usr/bin/env -S npx tsx
 
+import type { SCContentFilter } from "../src/index.js";
+
 async function time<T>(name: string, fn: () => T | Promise<T>) {
   console.time(name);
   const result = await fn();
@@ -17,9 +19,10 @@ async function main() {
     };
   });
 
-  await time('testMainActor', async () => {
-    await SC.NativeModule.testMainActor();
-  })
+  const filter2 = await time("testMainActor", async () => {
+    return await (SC.NativeModule.testMainActor() as Promise<SCContentFilter>);
+  });
+  console.log({ filter2 });
 
   const sharable = await time("getSharableContent", () =>
     SC.SCSharableContent.getSharableContent({
@@ -59,9 +62,7 @@ async function main() {
   });
   console.log(config);
 
-  const image = await time("captureImage", () =>
-    SC.captureImage(filter, config)
-  );
+  const image = await time("captureImage", () => SC.captureImage(filter2));
   console.log(image);
 
   const imageData = await time("getImageData", () => image.getImageData());
