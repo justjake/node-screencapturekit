@@ -159,35 +159,97 @@ func makeTestMainActor() throws -> NodeFunction {
   }
 }
 
-@available(macOS 14.0, *)
-func testMainActor2() throws -> ContentFilter {
-  class MyAppDelegate: NSObject, NSApplicationDelegate {
-    var result: Result<SCContentFilter, Error>? = nil
-    func applicationDidFinishLaunching(_ notification: Notification) {
-      print("applicationDidFinishLaunching")
-      // Is this enough to trigger the bug?
-      Task {
-        let config = SCContentSharingPickerConfiguration()
-        do {
-          result = .success(try await config.preset())
-          
-          let stopEvent = NSEvent.otherEvent(with: .applicationDefined, location: .zero, modifierFlags: .deviceIndependentFlagsMask, timestamp: TimeInterval(), windowNumber: 0, context: nil, subtype: 0, data1: 0, data2: 0)!
-          NSApp.postEvent(stopEvent, atStart: true)
-          NSApp.stop(self)
-        } catch {
-          result = .failure(error)
-        }
+class MyAppDelegate<T>: NSObject, NSApplicationDelegate {
+  var result: Result<T, Error>? = nil
+  var perform: () async throws -> T
+  
+  init(_ perform: @escaping () async throws -> T) {
+    self.perform = perform
+  }
+  
+  func applicationDidFinishLaunching(_ notification: Notification) {
+    print("applicationDidFinishLaunching")
+    // Is this enough to trigger the bug?
+    Task { 
+      print("task start")
+      defer {
+        print("task end \(result)")
+      }
+      do {
+        result = .success(try await perform())
+        let stopEvent = NSEvent.otherEvent(with: .applicationDefined, location: .zero, modifierFlags: .deviceIndependentFlagsMask, timestamp: TimeInterval(), windowNumber: 0, context: nil, subtype: 0, data1: 0, data2: 0)!
+        NSApp.postEvent(stopEvent, atStart: true)
+        NSApp.stop(self)
+      } catch {
+        result = .failure(error)
       }
     }
   }
   
-  let delegate = MyAppDelegate()
-  let app = NSApplication.shared
-  app.delegate = delegate
-  app.run()
-  print("app.run done")
-  let result = try delegate.result!.get()
-  return ContentFilter(result)
+  func runAppSync() throws -> T {
+    let app = NSApplication.shared
+    app.delegate = self
+    app.run()
+    return try self.result!.get()
+  }
+}
+
+
+func isAppRunning() -> Bool {
+  return NSApplication.shared.isRunning
+}
+
+@NodeActor @available(macOS 14.0, *)
+func maybeBlockMainThreadWithAppUntilTaskComplete(perform fn: @escaping () async throws -> ()) throws -> () {
+  if (isAppRunning()) {
+    Task { try await fn() }
+  }
+  
+  let delegate = MyAppDelegate(fn)
+  return try delegate.runAppSync()
+}
+
+@NodeActor @available(macOS 14.0, *)
+func testMainActor2() throws -> NodePromise {
+  return try NodePromise { resolve in
+      do {
+        try maybeBlockMainThreadWithAppUntilTaskComplete { @MainActor in
+          let config = SCContentSharingPickerConfiguration()
+          let thingy = try await config.preset()
+          try NodeActor.unsafeAssumeIsolated {
+            try resolve(.success(ContentFilter(thingy)))
+          }
+        }
+      } catch {
+        try! resolve(.failure(error))
+      }
+  }
+//  class MyAppDelegate: NSObject, NSApplicationDelegate {
+//    var result: Result<SCContentFilter, Error>? = nil
+//    func applicationDidFinishLaunching(_ notification: Notification) {
+//      print("applicationDidFinishLaunching")
+//      // Is this enough to trigger the bug?
+//      Task {
+//        let config = SCContentSharingPickerConfiguration()
+//        do {
+//          result = .success(try await config.preset())
+//          let stopEvent = NSEvent.otherEvent(with: .applicationDefined, location: .zero, modifierFlags: .deviceIndependentFlagsMask, timestamp: TimeInterval(), windowNumber: 0, context: nil, subtype: 0, data1: 0, data2: 0)!
+//          NSApp.postEvent(stopEvent, atStart: true)
+//          NSApp.stop(self)
+//        } catch {
+//          result = .failure(error)
+//        }
+//      }
+//    }
+//  }
+//  
+//  let delegate = MyAppDelegate()
+//  let app = NSApplication.shared
+//  app.delegate = delegate
+//  app.run()
+//  print("app.run done")
+//  let result = try delegate.result!.get()
+//  return ContentFilter(result)
 }
 
 @available(macOS 14.0, *)
