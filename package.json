@@ -1,6 +1,6 @@
 {
   "name": "node-screencapturekit",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "NodeJS wrapper for Apple's ScreenCaptureKit",
   "scripts": {
     "swift:debug": "node-swift build --debug",
@@ -31,7 +31,7 @@
     "./lib",
     "./.build/Module.node",
     "./.build/release",
-    "./.build/arm64-apple-macosx/release/Module.node"
+    "./.build/*-apple-macosx/release/Module.node"
   ],
   "devDependencies": {
     "node-swift": "git://github.com/justjake/node-swift.git#jake--NodeName-macro",
