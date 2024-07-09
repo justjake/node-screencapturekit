@@ -18,19 +18,17 @@ For a demo of the available features, see [the demo](https://github.com/justjake
 
 See also the [API documentation for Apple's ScreenCaptureKit]()
 
-## TODOs
+## Roadmap
 
 - [x] Sharable content enumeration & filtering
 - [x] Screenshot capture
-- [ ] Picker UI
+- [ ] Picker UI (if possible)
   - [ ] Built-in picker UI (SCContentSharingPicker)
   - [ ] Custom screen grab UI via SwiftUI
 - [ ] Tests
 - [ ] Binary distribution
 - [ ] Video streaming
 - [ ] Audio streaming
-
-```typescript
 
 ## Development
 

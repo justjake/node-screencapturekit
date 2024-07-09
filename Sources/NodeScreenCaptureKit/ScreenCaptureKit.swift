@@ -1,5 +1,5 @@
-import Cocoa
 import AppKit
+import Cocoa
 import CoreGraphics
 import NodeAPI
 import ScreenCaptureKit
@@ -41,8 +41,8 @@ extension SCDisplay: NodeValueConvertible {
   func nodeInspect(_ inspector: Inspector) throws -> String {
     try inspector.nodeClass(
       value: self, paths:
-        ("displayID", \.displayID),
-        ("frame", \.frame)
+      ("displayID", \.displayID),
+      ("frame", \.frame)
     )
   }
 }
@@ -83,9 +83,9 @@ extension SCDisplay: NodeValueConvertible {
 @available(macOS 12.3, *)
 @NodeClass final class Window: NodeInspect {
   let inner: SCWindow
-  
+
   private var lastMeasuredShadow: (windowSize: CGSize, shadowSize: CGSize)? = nil
-  
+
   init(_ inner: SCWindow) {
     self.inner = inner
   }
@@ -115,11 +115,11 @@ extension SCDisplay: NodeValueConvertible {
 
   @NodeMethod func sizeWithShadow() -> CGSize? {
     let currentSize = frame.size
-    
+
     if let measured = lastMeasuredShadow, measured.windowSize == currentSize {
       return measured.shadowSize
     }
-    
+
     // https://developer.apple.com/documentation/coregraphics/1454852-cgwindowlistcreateimage
     // Appears to be the only way we can ask for the shadow bounds:
     // capture the shadow only with null bounds then measure the image
@@ -127,11 +127,12 @@ extension SCDisplay: NodeValueConvertible {
     guard
       let image = CGWindowListCreateImage(
         CGRectNull, CGWindowListOption.optionIncludingWindow, inner.windowID,
-        [CGWindowImageOption.onlyShadows, CGWindowImageOption.nominalResolution])
+        [CGWindowImageOption.onlyShadows, CGWindowImageOption.nominalResolution]
+      )
     else {
       return nil
     }
-    
+
     let currentShadowSize = image.size
     lastMeasuredShadow = (currentSize, currentShadowSize)
     return currentShadowSize
@@ -155,15 +156,15 @@ struct ContentFilterArgs: NodeValueCreatable {
   typealias ValueType = NodeObject
 
   static func from(_ value: NodeAPI.NodeObject) throws -> ContentFilterArgs {
-    Self(
-      window: try value.window.as(Window.self),
-      includeWindowShadow: try value.inclideWindowShadow.as(Bool.self),
-      display: try value.display.as(Display.self),
-      excludeMenuBar: try value.excludeMenuBar.as(Bool.self),
-      windows: try value.windows.as([Window].self),
-      excludingWindows: try value.excludingWindows.as([Window].self),
-      includingApplications: try value.includingApplications.as([RunningApplication].self),
-      excludingApplications: try value.excludingApplications.as([RunningApplication].self)
+    try Self(
+      window: value.window.as(Window.self),
+      includeWindowShadow: value.inclideWindowShadow.as(Bool.self),
+      display: value.display.as(Display.self),
+      excludeMenuBar: value.excludeMenuBar.as(Bool.self),
+      windows: value.windows.as([Window].self),
+      excludingWindows: value.excludingWindows.as([Window].self),
+      includingApplications: value.includingApplications.as([RunningApplication].self),
+      excludingApplications: value.excludingApplications.as([RunningApplication].self)
     )
   }
 
@@ -184,13 +185,13 @@ struct ContentFilterArgs: NodeValueCreatable {
     } else {
       contentFilter.display = display
     }
-    
+
     if #available(macOS 14.2, *) {
       if let excludeMenuBar = self.excludeMenuBar {
         contentFilter.inner.includeMenuBar = !excludeMenuBar
       }
     }
-    
+
     return contentFilter
   }
 
@@ -198,31 +199,33 @@ struct ContentFilterArgs: NodeValueCreatable {
     // https://forums.developer.apple.com/forums/thread/743615
     _ = CGMainDisplayID()
 
-    if let window = self.window {
+    if let window = window {
       return ContentFilter(SCContentFilter(desktopIndependentWindow: window.inner))
     }
 
-    guard let display = self.display?.inner else {
+    guard let display = display?.inner else {
       throw MyError.missingProperty("Must either pass a window or a display")
     }
 
-    let excludingWindows = self.excludingWindows?.map({ $0.inner }) ?? []
-    let includingWindows = self.windows?.map({ $0.inner }) ?? []
+    let excludingWindows = self.excludingWindows?.map { $0.inner } ?? []
+    let includingWindows = windows?.map { $0.inner } ?? []
 
-    if let excludingApplications = self.excludingApplications?.map({ $0.inner }) {
+    if let excludingApplications = excludingApplications?.map({ $0.inner }) {
       return ContentFilter(
         SCContentFilter(
           display: display, excludingApplications: excludingApplications,
-          exceptingWindows: includingWindows))
+          exceptingWindows: includingWindows
+        ))
     }
 
-    if let includingApplications = self.includingApplications?.map({ $0.inner }) {
+    if let includingApplications = includingApplications?.map({ $0.inner }) {
       return ContentFilter(
         SCContentFilter(
-          display: display, including: includingApplications, exceptingWindows: excludingWindows))
+          display: display, including: includingApplications, exceptingWindows: excludingWindows
+        ))
     }
 
-    if self.windows != nil {
+    if windows != nil {
       return ContentFilter(SCContentFilter(display: display, including: includingWindows))
     }
 
@@ -250,7 +253,7 @@ struct ContentFilterArgs: NodeValueCreatable {
   }
 
   @NodeProperty var scaledContentSize: CGSize {
-    if let window = self.window, includeSingleWindowShadows, let sizeWithShadow = window.sizeWithShadow() {
+    if let window = window, includeSingleWindowShadows, let sizeWithShadow = window.sizeWithShadow() {
       return sizeWithShadow.scaled(by: pointPixelScale)
     }
     return contentRect.size.scaled(by: pointPixelScale)
@@ -289,46 +292,48 @@ struct ContentFilterArgs: NodeValueCreatable {
 extension SCShareableContent: NodeValueConvertible {
   public func nodeValue() throws -> any NodeAPI.NodeValue {
     try NodeObject([
-      "displays": self.displays.map { Display($0) },
-      "applications": self.applications.map { RunningApplication($0) },
-      "windows": self.windows.map { Window($0) },
+      "displays": displays.map { Display($0) },
+      "applications": applications.map { RunningApplication($0) },
+      "windows": windows.map { Window($0) },
     ])
   }
 
   /*
-  includeDesktopWindows?: boolean;
-  onScreenWindowsOnly?: boolean;
-  onScreenWindowsOnlyAbove?: SCWindow;
-  onScreenWindowsOnlyBelow?: SCWindow;
-  */
+   includeDesktopWindows?: boolean;
+   onScreenWindowsOnly?: boolean;
+   onScreenWindowsOnlyAbove?: SCWindow;
+   onScreenWindowsOnlyBelow?: SCWindow;
+   */
   @NodeActor public static func getNodeSharableContent(nodeArgs: NodeObject? = nil) async throws
     -> SCShareableContent
   {
     let includeDesktopWindows = try nodeArgs?["includeDesktopWindows"].as(Bool.self) ?? false
 
     if let onScreenWindowsOnlyAbove = try nodeArgs?["onScreenWindowsOnlyAbove"].as(Window.self) {
-      return try await self.excludingDesktopWindows(
-        !includeDesktopWindows, onScreenWindowsOnlyAbove: onScreenWindowsOnlyAbove.inner)
+      return try await excludingDesktopWindows(
+        !includeDesktopWindows, onScreenWindowsOnlyAbove: onScreenWindowsOnlyAbove.inner
+      )
     }
 
     if let onScreenWindowsOnlyBelow = try nodeArgs?["onScreenWindowsOnlyBelow"].as(Window.self) {
-      return try await self.excludingDesktopWindows(
-        !includeDesktopWindows, onScreenWindowsOnlyBelow: onScreenWindowsOnlyBelow.inner)
-
+      return try await excludingDesktopWindows(
+        !includeDesktopWindows, onScreenWindowsOnlyBelow: onScreenWindowsOnlyBelow.inner
+      )
     }
 
     if let onScreenWindowsOnly = try nodeArgs?["onScreenWindowsOnly"].as(Bool.self) {
-      return try await self.excludingDesktopWindows(
-        !includeDesktopWindows, onScreenWindowsOnly: onScreenWindowsOnly)
+      return try await excludingDesktopWindows(
+        !includeDesktopWindows, onScreenWindowsOnly: onScreenWindowsOnly
+      )
     }
 
     if !includeDesktopWindows {
-      return try await self.excludingDesktopWindows(
-        !includeDesktopWindows, onScreenWindowsOnly: false)
-
+      return try await excludingDesktopWindows(
+        !includeDesktopWindows, onScreenWindowsOnly: false
+      )
     }
 
-    return try await self.current
+    return try await current
   }
 }
 
@@ -343,7 +348,7 @@ extension SCCaptureResolutionType: NodeValueConvertible, CustomDebugStringConver
   }
 
   func nodeInspect(_ inspector: Inspector) throws -> String {
-    "\(try inspector.stylize(inferType: rawValue)) (\(type(of: self)).\(caseName))"
+    try "\(inspector.stylize(inferType: rawValue)) (\(type(of: self)).\(caseName))"
   }
 
   public var debugDescription: String {
@@ -351,7 +356,7 @@ extension SCCaptureResolutionType: NodeValueConvertible, CustomDebugStringConver
   }
 
   public func nodeValue() throws -> any NodeAPI.NodeValue {
-    try NodeNumber(Double(self.rawValue))
+    try NodeNumber(Double(rawValue))
   }
 }
 
@@ -363,7 +368,7 @@ extension UInt32: NodeValueConvertible, NodeValueCreatable {
   }
 
   public static func from(_ value: NodeAPI.NodeNumber) throws -> UInt32 {
-    UInt32(try value.double())
+    try UInt32(value.double())
   }
 }
 
@@ -413,7 +418,7 @@ extension UInt32: NodeValueConvertible, NodeValueCreatable {
   func nodeInspect(_ inspector: Inspector) throws -> String {
     try inspector.nodeClass(
       value: self,
-      paths:  // Output
+      paths: // Output
       ("size", \.size),
       ("captureResolution", \.captureResolution),
       ("scalesToFit", \.scalesToFit),
@@ -433,7 +438,7 @@ public protocol CaseNames: CaseIterable {
 }
 
 public extension CaseNames {
-  static var byName: [String:Self]  {
+  static var byName: [String: Self] {
     Dictionary(uniqueKeysWithValues: allCases.map { (name(of: $0), $0) })
   }
 }
@@ -463,26 +468,26 @@ extension SCContentSharingPickerMode: NodeValueCreatable, NodeValueConvertible, 
     default: "unknown"
     }
   }
-  
+
   public static var allCases: [SCContentSharingPickerMode] {
     [.multipleApplications, .multipleWindows, .singleApplication, .singleWindow, .singleDisplay]
   }
-  
+
   public typealias ValueType = NodeNumber
-  
+
   public func nodeValue() throws -> any NodeAPI.NodeValue {
     try NodeNumber(Double(rawValue))
   }
-  
+
   @NodeActor public static func from(_ value: ValueType) throws -> Self {
-    Self(rawValue: UInt(try value.double()))
+    try Self(rawValue: UInt(value.double()))
   }
 }
 
 @available(macOS 14.0, *)
 extension SCContentSharingPickerConfiguration: NodeValueCreatable {
   public typealias ValueType = NodeObject
-  
+
   /*
    public var allowedPickerModes: SCContentSharingPickerMode
 
@@ -493,63 +498,69 @@ extension SCContentSharingPickerConfiguration: NodeValueCreatable {
    public var allowsChangingSelectedContent: Bool
 
    */
-  
+
   @NodeActor public static func from(_ value: ValueType) throws -> Self {
     var result = Self()
-    
+
     if let mode = try value["allowedPickerModes"].as(SCContentSharingPickerMode.self) {
       result.allowedPickerModes = mode
     }
-    
+
     if let excludedWindowIds = try value["excludedWindowIDs"].as([Double].self) {
       result.excludedWindowIDs = excludedWindowIds.map { Int($0) }
     }
-    
+
     if let excludedBundleIDs = try value["excludedBundleIDs"].as([String].self) {
       result.excludedBundleIDs = excludedBundleIDs
     }
-    
+
     if let allowsChangingSelectedContent = try value["allowsChangingSelectedContent"].as(Bool.self) {
       result.allowsChangingSelectedContent = allowsChangingSelectedContent
     }
-    
+
     return result
   }
-  
+
   func preset() async throws -> SCContentFilter {
     class PickerObserver: NSObject, SCContentSharingPickerObserver {
       typealias Promise = CheckedContinuation<SCContentFilter, Error>
       var continuation: Promise? = nil
       var config: SCContentSharingPickerConfiguration? = nil
-      
+
       func present(_ continuation: Promise, config: SCContentSharingPickerConfiguration) {
         self.continuation = continuation
         self.config = config
-        SCContentSharingPicker.shared.add(self)
-        SCContentSharingPicker.shared.configuration = config
-        SCContentSharingPicker.shared.present()
+        Task { @MainActor in
+          print("present around on main thread?")
+          let picker = SCContentSharingPicker.shared
+          picker.isActive = true
+          picker.add(self)
+          picker.configuration = config
+          picker.present(using: .window)
+          print("did call present")
+        }
       }
-      
-      func contentSharingPicker(_ picker: SCContentSharingPicker, didCancelFor stream: SCStream?) {
+
+      func contentSharingPicker(_: SCContentSharingPicker, didCancelFor _: SCStream?) {
         done()
         continuation?.resume(throwing: MyError.unsupported("Cancelled"))
       }
-      
-      func contentSharingPicker(_ picker: SCContentSharingPicker, didUpdateWith filter: SCContentFilter, for stream: SCStream?) {
+
+      func contentSharingPicker(_: SCContentSharingPicker, didUpdateWith filter: SCContentFilter, for _: SCStream?) {
         done()
         continuation?.resume(returning: filter)
       }
-      
+
       func contentSharingPickerStartDidFailWithError(_ error: any Error) {
         done()
         continuation?.resume(throwing: error)
       }
-      
+
       func done() {
         SCContentSharingPicker.shared.remove(self)
       }
     }
-    
+
     return try await withCheckedThrowingContinuation { (continuation: PickerObserver.Promise) in
       print("withCheckedThrowingContinuation")
       let pickerObserver = PickerObserver()
@@ -558,24 +569,23 @@ extension SCContentSharingPickerConfiguration: NodeValueCreatable {
   }
 }
 
-
 // This doesn't work at all.
-//func someMain(_ appDelegate: NSApplicationDelegate) {
+// func someMain(_ appDelegate: NSApplicationDelegate) {
 //  print("Thread: \(Thread.current) isMain: \(Thread.isMainThread) isMultiThreaded: \(Thread.isMultiThreaded())")
 //  print("starting NSApplicationMain")
 //  let app = NSApplication.shared
 //  app.delegate = appDelegate
 //  _ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
 //  print("Done main")
-//}
+// }
 //
 //
 // Neither does this, since it isn't actually the main UNIX thread of the process,
 // It can't do main-thread-only things like starting NSApplicationMain.
-//class MainLoopThread: Thread {
+// class MainLoopThread: Thread {
 //  static var shared = MainLoopThread()
-//  
+//
 //  override func main() {
 //    someMain()
 //  }
-//}
+// }

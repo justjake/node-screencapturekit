@@ -10,7 +10,7 @@
     "ts:check": "tsc --noEmit",
     "//": "LIFECYCLE SCRIPTS",
     "//": "currently just does a smoketest",
-    "test": "node-swift build && scripts/demo.ts && open image.png",
+    "test": "npm run swift:debug && rm -f image.png && scripts/demo.ts && open image.png",
     "//": "Runs BEFORE a tarball is packed (on npm pack, npm publish, and when installing a git dependency)",
     "prepack": "npm run swift:rebuild && npm run ts:build"
   },

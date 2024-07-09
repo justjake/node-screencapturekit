@@ -17,6 +17,10 @@ async function main() {
     };
   });
 
+  await time('testMainActor', async () => {
+    await SC.NativeModule.testMainActor();
+  })
+
   const sharable = await time("getSharableContent", () =>
     SC.SCSharableContent.getSharableContent({
       onScreenWindowsOnly: true,
