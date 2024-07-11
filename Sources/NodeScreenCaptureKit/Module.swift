@@ -205,6 +205,10 @@ func maybeBlockMainThreadWithAppUntilTaskComplete(perform fn: @escaping () async
     Task { try await fn() }
   }
   
+  if (!Thread.isMainThread) {
+    throw MyError.unsupported("If NSApp is not running, can only call this API from the main thread")
+  }
+  
   let delegate = MyAppDelegate(fn)
   return try delegate.runAppSync()
 }
